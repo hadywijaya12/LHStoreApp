@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "497674009483",
+    "project_id": "lhstore-80597",
+    "storage_bucket": "lhstore-80597.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:497674009483:android:0bb256eb87851c14dccd8e",
+        "android_client_info": {
+          "package_name": "com.lhstore.lhstore"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMUQrdfF-nZP_1pmJXTnAVTWGqg0EXKlc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
