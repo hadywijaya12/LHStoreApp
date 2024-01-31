@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
@@ -12,8 +13,72 @@ import 'package:lhstore/service/product_service.dart';
 import '../controllers/product_controller.dart';
 import '../../home/views/homepage.dart';
 
-class ProductView extends GetView<ProductController> {
-  const ProductView({Key? key}) : super(key: key);
+class ProductView extends StatefulWidget {
+  const ProductView({super.key});
+
+  @override
+  State<ProductView> createState() => _ProductViewState();
+}
+
+class _ProductViewState extends State<ProductView> {
+  List _allResults = [];
+  List _resultlist = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  void initState() {
+    getClientStream();
+    _searchController.addListener(_onSearchChanged);
+    super.initState();
+  }
+
+  _onSearchChanged() {
+    print(_searchController.text);
+    searchResultList();
+  }
+
+  searchResultList() {
+    var showResults = [];
+    if (_searchController.text != "") {
+      for (var clientSnapShot in _allResults) {
+        var name = clientSnapShot['Nama'].toString().toLowerCase();
+        if (name.contains(_searchController.text.toLowerCase())) {
+          showResults.add(clientSnapShot);
+        }
+      }
+    } else {
+      showResults = List.from(_allResults);
+    }
+
+    setState(() {
+      _resultlist = showResults;
+    });
+  }
+
+  getClientStream() async {
+    var data = await FirebaseFirestore.instance
+        .collection("Products")
+        .orderBy("Nama")
+        .get();
+
+    setState(() {
+      _allResults = data.docs;
+    });
+    searchResultList();
+  }
+
+  void didChangeDependecies() {
+    getClientStream();
+    super.didChangeDependencies();
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    // TODO: implement dispose
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     var currentIndex = 1;
@@ -48,25 +113,31 @@ class ProductView extends GetView<ProductController> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: TextField(
-              decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                prefixIconColor: Color(0xff858585),
-                isDense: true,
-                isCollapsed: true,
-                contentPadding: EdgeInsets.all(15),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(
-                    width: 0,
-                    style: BorderStyle.none,
-                  ),
-                ),
-                hintText: "Search Anythings",
-                hintStyle: TextStyle(fontSize: 14, color: Color(0xff858585)),
-                filled: true,
-                fillColor: Color.fromARGB(255, 255, 229, 212),
-              ),
+            child: CupertinoSearchTextField(
+              controller: _searchController,
+              padding: EdgeInsets.all(15),
+              placeholder: "Search Anythings",
+              decoration: BoxDecoration(
+                  color: Color.fromARGB(255, 255, 229, 212),
+                  borderRadius: BorderRadius.circular(8)),
+              // decoration: InputDecoration(
+              //   prefixIcon: Icon(Icons.search),
+              //   prefixIconColor: Color(0xff858585),
+              //   isDense: true,
+              //   isCollapsed: true,
+              //   contentPadding: EdgeInsets.all(15),
+              //   border: OutlineInputBorder(
+              //     borderRadius: BorderRadius.circular(10.0),
+              //     borderSide: BorderSide(
+              //       width: 0,
+              //       style: BorderStyle.none,
+              //     ),
+              //   ),
+              //   hintText: "Search Anythings",
+              //   hintStyle: TextStyle(fontSize: 14, color: Color(0xff858585)),
+              //   filled: true,
+              //   fillColor: Color.fromARGB(255, 255, 229, 212),
+              // ),
             ),
           ),
           Padding(
@@ -87,14 +158,14 @@ class ProductView extends GetView<ProductController> {
                           crossAxisSpacing: 20,
                           mainAxisSpacing: 20,
                         ),
-                        itemCount: data.length,
+                        itemCount: _resultlist.length,
                         itemBuilder: (context, index) {
                           return InkWell(
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
                                   builder: (context) => detailProduct(
-                                      title: data[index].reference.id,
-                                      data: data[index],
+                                      title: _resultlist[index].reference.id,
+                                      data: _resultlist[index],
                                       currentIndex: currentIndex)));
                             },
                             child: Container(
@@ -106,7 +177,7 @@ class ProductView extends GetView<ProductController> {
                               child: Column(
                                 children: [
                                   Image.network(
-                                    data[index]["Photo"],
+                                    _resultlist[index]["Photo"],
                                     width: 100,
                                     height: 100,
                                   ),
@@ -114,7 +185,7 @@ class ProductView extends GetView<ProductController> {
                                     padding: const EdgeInsets.all(8.0),
                                     child: Center(
                                       child: Text(
-                                        data[index]["Nama"],
+                                        _resultlist[index]["Nama"],
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -137,7 +208,7 @@ class ProductView extends GetView<ProductController> {
                                               color: Color(0xffF58244)),
                                         ),
                                         Text(
-                                          data[index]["Harga"],
+                                          _resultlist[index]["Harga"],
                                           style: const TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
@@ -181,6 +252,178 @@ class ProductView extends GetView<ProductController> {
     );
   }
 }
+
+// class ProductView extends GetView<ProductController> {
+//   const ProductView({Key? key}) : super(key: key);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     var currentIndex = 1;
+
+//     return SingleChildScrollView(
+//       scrollDirection: Axis.vertical,
+//       child: Column(
+//         children: [
+//           Padding(
+//             padding: EdgeInsets.fromLTRB(22, 45, 20, 0),
+//             child: Row(
+//               children: [
+//                 Text(
+//                   "Semua Produk",
+//                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+//                 ),
+//               ],
+//             ),
+//           ),
+//           Padding(
+//             padding: EdgeInsets.fromLTRB(22, 10, 20, 0),
+//             child: Row(
+//               children: [
+//                 Container(
+//                   height: 4,
+//                   width: 70,
+//                   decoration: BoxDecoration(
+//                       color: Color(0xffF58244),
+//                       borderRadius: BorderRadius.circular(50)),
+//                 )
+//               ],
+//             ),
+//           ),
+//           Padding(
+//             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+//             child: TextField(
+//               decoration: InputDecoration(
+//                 prefixIcon: Icon(Icons.search),
+//                 prefixIconColor: Color(0xff858585),
+//                 isDense: true,
+//                 isCollapsed: true,
+//                 contentPadding: EdgeInsets.all(15),
+//                 border: OutlineInputBorder(
+//                   borderRadius: BorderRadius.circular(10.0),
+//                   borderSide: BorderSide(
+//                     width: 0,
+//                     style: BorderStyle.none,
+//                   ),
+//                 ),
+//                 hintText: "Search Anythings",
+//                 hintStyle: TextStyle(fontSize: 14, color: Color(0xff858585)),
+//                 filled: true,
+//                 fillColor: Color.fromARGB(255, 255, 229, 212),
+//               ),
+//             ),
+//           ),
+//           Padding(
+//               padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
+//               child: StreamBuilder(
+//                 stream: ProductService.getProducts(),
+//                 builder: (BuildContext context,
+//                     AsyncSnapshot<QuerySnapshot> snapshot) {
+//                   // if (snapshot.connectionState == ConnectionState.done) {
+//                   if (snapshot.hasData) {
+//                     var data = snapshot.data!.docs;
+//                     return GridView.builder(
+//                         physics: const NeverScrollableScrollPhysics(),
+//                         shrinkWrap: true,
+//                         gridDelegate:
+//                             const SliverGridDelegateWithFixedCrossAxisCount(
+//                           crossAxisCount: 2,
+//                           crossAxisSpacing: 20,
+//                           mainAxisSpacing: 20,
+//                         ),
+//                         itemCount: data.length,
+//                         itemBuilder: (context, index) {
+//                           return InkWell(
+//                             onTap: () {
+//                               Navigator.of(context).push(MaterialPageRoute(
+//                                   builder: (context) => detailProduct(
+//                                       title: data[index].reference.id,
+//                                       data: data[index],
+//                                       currentIndex: currentIndex)));
+//                             },
+//                             child: Container(
+//                               height: 250,
+//                               width: double.infinity,
+//                               decoration: BoxDecoration(
+//                                   color: Colors.white,
+//                                   borderRadius: BorderRadius.circular(20)),
+//                               child: Column(
+//                                 children: [
+//                                   Image.network(
+//                                     data[index]["Photo"],
+//                                     width: 100,
+//                                     height: 100,
+//                                   ),
+//                                   Padding(
+//                                     padding: const EdgeInsets.all(8.0),
+//                                     child: Center(
+//                                       child: Text(
+//                                         data[index]["Nama"],
+//                                         maxLines: 1,
+//                                         overflow: TextOverflow.ellipsis,
+//                                         style: TextStyle(
+//                                             fontWeight: FontWeight.bold,
+//                                             fontSize: 13),
+//                                       ),
+//                                     ),
+//                                   ),
+//                                   Padding(
+//                                     padding:
+//                                         const EdgeInsets.fromLTRB(0, 8, 8, 0),
+//                                     child: Row(
+//                                       mainAxisAlignment: MainAxisAlignment.end,
+//                                       children: [
+//                                         const Text(
+//                                           "Rp. ",
+//                                           style: TextStyle(
+//                                               fontSize: 12,
+//                                               fontWeight: FontWeight.bold,
+//                                               color: Color(0xffF58244)),
+//                                         ),
+//                                         Text(
+//                                           data[index]["Harga"],
+//                                           style: const TextStyle(
+//                                               fontSize: 12,
+//                                               fontWeight: FontWeight.bold,
+//                                               color: Color(0xffF58244)),
+//                                         )
+//                                       ],
+//                                     ),
+//                                   )
+//                                 ],
+//                               ),
+//                             ),
+//                           );
+//                         });
+//                   } else if (snapshot.hasError) {
+//                     return Center(
+//                       child: Text(snapshot.error.toString()),
+//                     );
+//                   } else {
+//                     return const Center(
+//                       child: Text("Something went wrong"),
+//                     );
+//                   }
+//                   // } else {
+//                   //   return Container(
+//                   //     child: Column(
+//                   //       children: [
+//                   //         SizedBox(
+//                   //           height: 60,
+//                   //         ),
+//                   //         Center(
+//                   //           child: CircularProgressIndicator(),
+//                   //         ),
+//                   //       ],
+//                   //     ),
+//                   //   );
+//                   // }
+//                 },
+//               ))
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 // GridView.builder(
 //                 physics: NeverScrollableScrollPhysics(),

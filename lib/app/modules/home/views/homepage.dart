@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -15,6 +16,64 @@ class homePage extends StatefulWidget {
 }
 
 class _homePageState extends State<homePage> {
+  List _allResults = [];
+  List _resultlist = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  void initState() {
+    getClientStream();
+    _searchController.addListener(_onSearchChanged);
+    super.initState();
+  }
+
+  _onSearchChanged() {
+    print(_searchController.text);
+    searchResultList();
+  }
+
+  searchResultList() {
+    var showResults = [];
+    if (_searchController.text != "") {
+      for (var clientSnapShot in _allResults) {
+        var name = clientSnapShot['Nama'].toString().toLowerCase();
+        if (name.contains(_searchController.text.toLowerCase())) {
+          showResults.add(clientSnapShot);
+        }
+      }
+    } else {
+      showResults = List.from(_allResults);
+    }
+
+    setState(() {
+      _resultlist = showResults;
+    });
+  }
+
+  getClientStream() async {
+    var data = await FirebaseFirestore.instance
+        .collection("Products")
+        .orderBy("Nama")
+        .get();
+
+    setState(() {
+      _allResults = data.docs;
+    });
+    searchResultList();
+  }
+
+  void didChangeDependecies() {
+    getClientStream();
+    super.didChangeDependencies();
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    // TODO: implement dispose
+    super.dispose();
+  }
+
   final controller = Get.put(SettingController());
   @override
   Widget build(BuildContext context) {
@@ -98,25 +157,31 @@ class _homePageState extends State<homePage> {
               }),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: TextField(
-              decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                prefixIconColor: Color(0xff858585),
-                isDense: true,
-                isCollapsed: true,
-                contentPadding: EdgeInsets.all(15),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(
-                    width: 0,
-                    style: BorderStyle.none,
-                  ),
-                ),
-                hintText: "Search Anythings",
-                hintStyle: TextStyle(fontSize: 14, color: Color(0xff858585)),
-                filled: true,
-                fillColor: Color.fromARGB(255, 255, 229, 212),
-              ),
+            child: CupertinoSearchTextField(
+              controller: _searchController,
+              padding: EdgeInsets.all(15),
+              placeholder: "Search Anythings",
+              decoration: BoxDecoration(
+                  color: Color.fromARGB(255, 255, 229, 212),
+                  borderRadius: BorderRadius.circular(8)),
+              // decoration: InputDecoration(
+              //   prefixIcon: Icon(Icons.search),
+              //   prefixIconColor: Color(0xff858585),
+              //   isDense: true,
+              //   isCollapsed: true,
+              //   contentPadding: EdgeInsets.all(15),
+              //   border: OutlineInputBorder(
+              //     borderRadius: BorderRadius.circular(10.0),
+              //     borderSide: BorderSide(
+              //       width: 0,
+              //       style: BorderStyle.none,
+              //     ),
+              //   ),
+              //   hintText: "Search Anythings",
+              //   hintStyle: TextStyle(fontSize: 14, color: Color(0xff858585)),
+              //   filled: true,
+              //   fillColor: Color.fromARGB(255, 255, 229, 212),
+              // ),
             ),
           ),
           Padding(
@@ -226,15 +291,15 @@ class _homePageState extends State<homePage> {
                           crossAxisSpacing: 20,
                           mainAxisSpacing: 20,
                         ),
-                        itemCount: data.length,
+                        itemCount: _resultlist.length,
                         itemBuilder: (context, index) {
                           return InkWell(
                             onTap: () {
                               Navigator.of(context).push(MaterialPageRoute(
                                   builder: (context) => detailProduct(
-                                        title: data[index].reference.id,
+                                        title: _resultlist[index].reference.id,
                                         currentIndex: currentIndex,
-                                        data: data[index],
+                                        data: _resultlist[index],
                                       )));
                             },
                             child: Container(
@@ -246,7 +311,7 @@ class _homePageState extends State<homePage> {
                               child: Column(
                                 children: [
                                   Image.network(
-                                    data[index]["Photo"],
+                                    _resultlist[index]["Photo"],
                                     width: 100,
                                     height: 100,
                                   ),
@@ -254,7 +319,7 @@ class _homePageState extends State<homePage> {
                                     padding: const EdgeInsets.all(8.0),
                                     child: Center(
                                       child: Text(
-                                        data[index]["Nama"],
+                                        _resultlist[index]["Nama"],
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -277,7 +342,7 @@ class _homePageState extends State<homePage> {
                                               color: Color(0xffF58244)),
                                         ),
                                         Text(
-                                          data[index]["Harga"],
+                                          _resultlist[index]["Harga"],
                                           style: const TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
